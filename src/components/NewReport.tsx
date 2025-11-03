@@ -1,8 +1,8 @@
 import { useState } from 'react';
+import React from 'react';
 import { Report } from '../App';
 import { supabase } from '../lib/supabase';
 import { Camera, Scan, MapPin, FileText, Save, X, Image as ImageIcon } from 'lucide-react';
-import { CameraCapture } from './CameraCapture';
 import { NFCScanner } from './NFCScanner';
 
 type NewReportProps = {
@@ -17,7 +17,8 @@ export function NewReport({ onSave, onCancel }: NewReportProps) {
   const [category, setCategory] = useState('Wartung');
   const [photos, setPhotos] = useState<string[]>([]);
   const [nfcTag, setNfcTag] = useState<string>('');
-  const [showCamera, setShowCamera] = useState(false);
+  // file input reference to open native camera on mobile (capture)
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [showNFC, setShowNFC] = useState(false);
 
   const [saving, setSaving] = useState(false);
@@ -83,7 +84,6 @@ export function NewReport({ onSave, onCancel }: NewReportProps) {
 
   const handlePhotoCapture = (photoUrl: string) => {
     setPhotos([...photos, photoUrl]);
-    setShowCamera(false);
   };
 
   const handleNFCScanned = (tag: string) => {
@@ -95,9 +95,7 @@ export function NewReport({ onSave, onCancel }: NewReportProps) {
     setPhotos(photos.filter((_, i) => i !== index));
   };
 
-  if (showCamera) {
-    return <CameraCapture onCapture={handlePhotoCapture} onClose={() => setShowCamera(false)} />;
-  }
+  // Note: we use a hidden file input to trigger the device camera (accept + capture)
 
   if (showNFC) {
     return <NFCScanner onScanned={handleNFCScanned} onClose={() => setShowNFC(false)} />;
@@ -173,11 +171,11 @@ export function NewReport({ onSave, onCancel }: NewReportProps) {
             value={nfcTag}
             readOnly
             placeholder="Kein Tag gescannt"
-            className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50"
+            className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 truncate"
           />
           <button
             onClick={() => setShowNFC(true)}
-            className="px-4 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition-colors flex items-center gap-2 shadow-md"
+            className="px-3 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition-colors flex items-center gap-2 shadow-md flex-shrink-0 whitespace-nowrap"
           >
             <Scan className="w-5 h-5" />
             Scannen
@@ -194,8 +192,28 @@ export function NewReport({ onSave, onCancel }: NewReportProps) {
       {/* Photos Section */}
       <div>
         <label className="block text-slate-700 mb-2">Fotos</label>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = String(reader.result ?? '');
+              setPhotos((p) => [...p, result]);
+            };
+            reader.readAsDataURL(file);
+            // reset input so same file can be selected again
+            e.currentTarget.value = '';
+          }}
+        />
+
         <button
-          onClick={() => setShowCamera(true)}
+          onClick={() => fileInputRef.current?.click()}
           className="w-full px-4 py-4 border-2 border-dashed border-slate-300 rounded-xl hover:border-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-slate-600"
         >
           <Camera className="w-5 h-5" />
@@ -209,7 +227,9 @@ export function NewReport({ onSave, onCancel }: NewReportProps) {
                 <img
                   src={photo}
                   alt={`Foto ${index + 1}`}
-                  className="w-full h-24 object-cover rounded-lg"
+                  className="w-full h-24 object-cover rounded-lg cursor-pointer"
+                  // clicking a thumbnail should open the camera to replace/add a photo
+                  onClick={() => fileInputRef.current?.click()}
                 />
                 <button
                   onClick={() => removePhoto(index)}
