@@ -41,3 +41,6 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 export const supabase = _supabase;
+
+// Export a simple flag so the app can show a UI hint when env vars are missing.
+export const SUPABASE_CONFIGURED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);

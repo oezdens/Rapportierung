@@ -5,7 +5,7 @@ import { ReportsList } from './components/ReportsList';
 import { ReportDetail } from './components/ReportDetail';
 import { Home, Plus, List, Settings } from 'lucide-react';
 import Login from './components/Login';
-import { supabase } from './lib/supabase';
+import { supabase, SUPABASE_CONFIGURED } from './lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 
 export type Report = {
@@ -149,6 +149,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200">
+      {/* Show a prominent banner when Supabase env vars are not configured in the environment. */}
+      {!SUPABASE_CONFIGURED && (
+        <div className="fixed top-0 left-0 right-0 z-50">
+          <div className="max-w-md mx-auto bg-yellow-50 border-b border-yellow-200 text-yellow-800 text-center text-sm py-2 px-3">
+            Supabase-Keys nicht konfiguriert. Setze VITE_SUPABASE_URL und VITE_SUPABASE_ANON_KEY in den Vercel-Environment-Variablen und redeploye die App, damit Auth und DB funktionieren.
+          </div>
+        </div>
+      )}
       {/* If not authenticated, show Login */}
       {!session ? (
         <Login onLogin={async () => {
